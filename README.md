@@ -2,7 +2,7 @@ This repo consists of my projects for COS350 Computer Graphics.
 
 The language being used for this project is a very new language called V.
 
-You can install V from the Vlang documentation [https://vlang.io](Here).
+You can install V from the Vlang documentation (https://vlang.io)[Here].
 
 Once V is downloaded, run the executable. It will compile and get everything setup.
 
