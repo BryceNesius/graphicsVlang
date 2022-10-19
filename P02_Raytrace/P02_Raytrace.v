@@ -40,21 +40,7 @@ fn get_scene_filenames() []string {
 }
 
 fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
-    a := 1.0
-    e := ray.e
-    ctr := surface.frame.o 
-    r := surface.radius
-    ec := Vector{ x: e.x - ctr.x, y: e.y - ctr.y, z: e.z - ctr.z }
-    b := 2.0 * ray.d.dot(ec)
-    c := ec.length_squared() - (r * r)
-    d := (b * b) - (4.0 * a * c)
-
-    if d < 0 {
-        // ray did not intersect sphere
-        return gfx.no_intersection
-    }
-    return Intersection{ distance: 1.0 }
-    /*
+     /*
         if surface's shape is a sphere
             if ray does not intersect sphere, return no intersection
             compute ray's t value(s) at intersection(s)
@@ -69,12 +55,32 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
             if intersection is outside the quad, return no intersection
             return intersection information
     */
+    a := 1.0
+    e := ray.e
+    ctr := surface.frame.o 
+    r := surface.radius
+    ec := Vector{ x: e.x - ctr.x, y: e.y - ctr.y, z: e.z - ctr.z }
+    b := 2.0 * ray.d.dot(ec)
+    c := ec.length_squared() - (r * r)
+    d := (b * b) - (4.0 * a * c)
+
+    if d < 0 {
+        // ray did not intersect sphere
+        return gfx.no_intersection
+    }
+    return Intersection{ distance: 1.0 }
 }
 
 // Determines if given ray intersects any surface in the scene.
 // If ray does not intersect anything, null is returned.
 // Otherwise, details of first intersection are returned as an `Intersection` struct.
 fn intersect_ray_scene(scene Scene, ray Ray) Intersection {
+     /*
+        for each surface in surfaces
+            continue if ray did not hit surface ( ex: inter.miss() )
+            continue if new intersection is not closer than previous closest intersection
+            set closest intersection to new intersection
+    */
     mut closest := gfx.no_intersection  // type is Intersection
 
     for surface in scene.surfaces {
@@ -83,27 +89,11 @@ fn intersect_ray_scene(scene Scene, ray Ray) Intersection {
             return intersection
         }
     }
-    /*
-        for each surface in surfaces
-            continue if ray did not hit surface ( ex: inter.miss() )
-            continue if new intersection is not closer than previous closest intersection
-            set closest intersection to new intersection
-    */
-
     return closest  // return closest intersection
 }
 
 // Computes irradiance (as Color) from scene along ray
 fn irradiance(scene Scene, ray Ray) Color {
-    mut accum := gfx.black
-
-    intersection := intersect_ray_scene(scene, ray)
-    if intersection.miss() {
-        return gfx.black
-    }
-    else {
-        return gfx.white
-    }
     /*
         get scene intersection
         if not hit, return scene's background intensity
@@ -118,12 +108,39 @@ fn irradiance(scene Scene, ray Ray) Color {
             accumulate reflected light (recursive call) scaled by material reflection
         return accumulated color
     */
+    mut accum := gfx.black
 
+    intersection := intersect_ray_scene(scene, ray)
+    if intersection.miss() {
+        return gfx.black
+    }
+    else {
+        return gfx.white
+    }
     return accum
 }
 
 // Computes image of scene using basic Whitted raytracer.
 fn raytrace(scene Scene) Image {
+    /*
+        if no anti-aliasing
+            foreach image row (scene.camera.sensor.resolution.height)
+                foreach pixel in row (scene.camera.senseor.resolution.width)
+                    compute ray-camera parameters (u,v) for pixel
+                    compute camera ray
+                    set pixel to color raytraced with ray (`irradiance`)
+        else
+            foreach image row
+                foreach pixel in row
+                    init accumulated color
+                    foreach sample in y
+                        foreach sample in x
+                            compute ray-camera parameters
+                            computer camera ray
+                            accumulate color raytraced with ray
+                    set pixel to average of accum color (scale by number of samples)
+        return rendered image
+    */
     mut image := gfx.Image{ size:scene.camera.sensor.resolution }
     image.clear()
 
@@ -145,27 +162,6 @@ fn raytrace(scene Scene) Image {
             image.set_xy(col, row, irradiance(scene, ray))
         }
     }
-
-    /*
-        if no anti-aliasing
-            foreach image row (scene.camera.sensor.resolution.height)
-                foreach pixel in row (scene.camera.senseor.resolution.width)
-                    compute ray-camera parameters (u,v) for pixel
-                    compute camera ray
-                    set pixel to color raytraced with ray (`irradiance`)
-        else
-            foreach image row
-                foreach pixel in row
-                    init accumulated color
-                    foreach sample in y
-                        foreach sample in x
-                            compute ray-camera parameters
-                            computer camera ray
-                            accumulate color raytraced with ray
-                    set pixel to average of accum color (scale by number of samples)
-        return rendered image
-    */
-
     return image
 }
 
