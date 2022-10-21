@@ -63,12 +63,20 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
     b := 2.0 * ray.d.dot(ec)
     c := ec.length_squared() - (r * r)
     d := (b * b) - (4.0 * a * c)
+    t := (-b - math.sqrt(d)) / 2.0
 
     if d < 0 {
         // ray did not intersect sphere
         return gfx.no_intersection
     }
-    return Intersection{ distance: 1.0 }
+    p := ray.at(t)
+    n := ctr.direction_to(p)
+
+    return Intersection{ 
+        distance: t,
+        frame: gfx.frame_oz( p, n),
+        surface: surface
+        }
 }
 
 // Determines if given ray intersects any surface in the scene.
@@ -112,11 +120,19 @@ fn irradiance(scene Scene, ray Ray) Color {
 
     intersection := intersect_ray_scene(scene, ray)
     if intersection.miss() {
-        return gfx.black
+        return scene.background_color
     }
-    else {
-        return gfx.white
+
+    for light in scene.lights {
+        light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
+        light_direction := intersection.frame.o.direction_to(light.frame.o)
+        accum.add_in(
+            light_response.mult(
+                intersection.surface.material.kd)
+                .scale(math.abs(intersection.frame.z.dot(light_direction))))
     }
+
+
     return accum
 }
 
@@ -152,9 +168,9 @@ fn raytrace(scene Scene) Image {
             u := f64(col) / f64(w) 
             v := f64(row) / f64(h)
             q := scene.camera.frame.o.add(
-                scene.camera.frame.x.scale((u - .5) * scene.camera.sensor.size.width)
+                scene.camera.frame.x.scale((u - 0.5) * scene.camera.sensor.size.width)
                 ).add(
-                    scene.camera.frame.y.scale(-(v - .5) * scene.camera.sensor.size.height)
+                    scene.camera.frame.y.scale(-(v - 0.5) * scene.camera.sensor.size.height)
                 ).sub(
                     scene.camera.frame.z.scale(scene.camera.sensor.distance)
                 )
