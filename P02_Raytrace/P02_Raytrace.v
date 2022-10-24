@@ -122,7 +122,8 @@ fn irradiance(scene Scene, ray Ray) Color {
     if intersection.miss() {
         return scene.background_color
     }
-
+    // kd -> the amount of reflected light from the object based on the material
+    // kl -> the color and intensity of the light source
     for light in scene.lights {
         light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
         light_direction := intersection.frame.o.direction_to(light.frame.o)
@@ -165,8 +166,8 @@ fn raytrace(scene Scene) Image {
 
     for row in 0 .. h {
         for col in 0 .. w {
-            u := f64(col) / f64(w) 
-            v := f64(row) / f64(h)
+            u := f64(col + 0.5) / f64(w) 
+            v := f64(row + 0.5) / f64(h)
             q := scene.camera.frame.o.add(
                 scene.camera.frame.x.scale((u - 0.5) * scene.camera.sensor.size.width)
                 ).add(
@@ -174,7 +175,9 @@ fn raytrace(scene Scene) Image {
                 ).sub(
                     scene.camera.frame.z.scale(scene.camera.sensor.distance)
                 )
+            // create a ray that passes from the focal point of the camera to the scene
             ray := scene.camera.frame.o.ray_through(q)
+            // then we determine what color to make that pixel with 'irradiance'
             image.set_xy(col, row, irradiance(scene, ray))
         }
     }
