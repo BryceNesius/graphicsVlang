@@ -53,7 +53,7 @@ pub fn (inter Intersection) miss() bool {
 
 // returns true if `a` is closer than `b`
 pub fn (a Intersection) is_closer(b Intersection) bool {
-    return a.distance < b.distance
+    return a.distance <= b.distance
 }
 // found bug in V on 2022.08.15
 // when using module import aliasing, the comparator operators cause problems

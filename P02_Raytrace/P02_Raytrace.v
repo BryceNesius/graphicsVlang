@@ -64,6 +64,9 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
     c := ec.length_squared() - (r * r)
     d := (b * b) - (4.0 * a * c)
     t := (-b - math.sqrt(d)) / 2.0
+    if t < 0 {
+        return gfx.no_intersection
+    }
 
     if d < 0 {
         // ray did not intersect sphere
@@ -93,10 +96,16 @@ fn intersect_ray_scene(scene Scene, ray Ray) Intersection {
 
     for surface in scene.surfaces {
         intersection := intersect_ray_surface(surface, ray)
-        if intersection.hit() {
+        if intersection.miss() {
+            continue
             return intersection
         }
+            if closest.is_closer(intersection) {
+                continue
+            }
+            closest = intersection
     }
+    //println(closest.distance)
     return closest  // return closest intersection
 }
 
@@ -122,16 +131,22 @@ fn irradiance(scene Scene, ray Ray) Color {
     if intersection.miss() {
         return scene.background_color
     }
+    normal := intersection.frame.z
+    kd := intersection.surface.material.kd
     // kd -> the amount of reflected light from the object based on the material
     // kl -> the color and intensity of the light source
     for light in scene.lights {
         light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
         light_direction := intersection.frame.o.direction_to(light.frame.o)
+
         accum.add_in(
-            light_response.mult(
-                intersection.surface.material.kd)
-                .scale(math.abs(intersection.frame.z.dot(light_direction))))
+            light_response.mult(kd).scale(math.abs(normal.dot(light_direction)))
+        )
     }
+    // ambient hack
+    accum.add_in(
+        scene.ambient_color.mult(kd)
+    )
 
 
     return accum
