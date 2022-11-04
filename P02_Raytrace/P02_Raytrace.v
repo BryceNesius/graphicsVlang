@@ -136,11 +136,17 @@ fn irradiance(scene Scene, ray Ray) Color {
     // kd -> the amount of reflected light from the object based on the material
     // kl -> the color and intensity of the light source
     for light in scene.lights {
+         v_direction := ray.d.negate()
         light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
         light_direction := intersection.frame.o.direction_to(light.frame.o)
+        h := light_direction.as_vector().add(v_direction.as_vector()).direction()
 
+        ks := intersection.surface.material.ks
+        n := intersection.surface.material.n
+       
         accum.add_in(
-            light_response.mult(kd).scale(math.abs(normal.dot(light_direction)))
+            light_response.mult(kd.add(ks.scale(math.pow(math.max(0.0, normal.dot(h)), n)))
+                ).scale(math.abs(normal.dot(light_direction)))
         )
     }
     // ambient hack
