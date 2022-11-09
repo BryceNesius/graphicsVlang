@@ -18,6 +18,7 @@ type Image     = gfx.Image
 type Intersection = gfx.Intersection
 type Surface      = gfx.Surface
 type Scene        = gfx.Scene
+type Shape        = gfx.Shape
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -38,8 +39,31 @@ fn get_scene_filenames() []string {
         'P02_08_antialiased',
     ]
 }
-
 fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
+    match surface.shape {
+        .sphere { return intersect_ray_sphere(surface, ray) }
+        .quad { return intersect_ray_quad(surface, ray) }
+    }
+}
+fn intersect_ray_quad(surface Surface, ray Ray) Intersection {
+    c := surface.frame.o
+    e := ray.e
+    d := ray.d 
+    n := surface.frame.z
+    t := e.vector_to(c).dot(n) / d.dot(n)
+    if t > ray.t_max || t < ray.t_min {
+        return gfx.no_intersection
+    }
+    p := ray.at(t)
+    return Intersection{
+        frame: gfx.frame_oz(p, n),
+        surface: surface,
+        distance: t
+    }
+
+}
+
+fn intersect_ray_sphere(surface Surface, ray Ray) Intersection {
      /*
         if surface's shape is a sphere
             if ray does not intersect sphere, return no intersection
@@ -63,8 +87,16 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
     b := 2.0 * ray.d.dot(ec)
     c := ec.length_squared() - (r * r)
     d := (b * b) - (4.0 * a * c)
-    t := (-b - math.sqrt(d)) / 2.0
-    if t < 0 {
+    mut t := (-b - math.sqrt(d)) / 2.0
+    p := ray.at(t)
+    n := ctr.direction_to(p)
+
+    // if surface is a quad, else it is treated as a sphere
+
+    if t < ray.t_min {
+        t = (-b + math.sqrt(d)) / 2.0
+    }
+    if t > ray.t_max || t < ray.t_min {
         return gfx.no_intersection
     }
 
@@ -72,8 +104,7 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
         // ray did not intersect sphere
         return gfx.no_intersection
     }
-    p := ray.at(t)
-    n := ctr.direction_to(p)
+    
 
     return Intersection{ 
         distance: t,
@@ -133,19 +164,25 @@ fn irradiance(scene Scene, ray Ray) Color {
     }
     normal := intersection.frame.z
     kd := intersection.surface.material.kd
+    ks := intersection.surface.material.ks
+    n := intersection.surface.material.n
     // kd -> the amount of reflected light from the object based on the material
     // kl -> the color and intensity of the light source
     for light in scene.lights {
-         v_direction := ray.d.negate()
+        v_direction := ray.d.negate()
         light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
         light_direction := intersection.frame.o.direction_to(light.frame.o)
         h := light_direction.as_vector().add(v_direction.as_vector()).direction()
 
-        ks := intersection.surface.material.ks
-        n := intersection.surface.material.n
+        shadow_ray := intersection.frame.o.ray_to(light.frame.o)
+        if intersect_ray_scene(scene, shadow_ray).hit() {
+            // in shadow
+            continue
+        }
        
         accum.add_in(
-            light_response.mult(kd.add(ks.scale(math.pow(math.max(0.0, normal.dot(h)), n)))
+            light_response.mult(
+                kd.add(ks.scale(math.pow(math.max(0.0, normal.dot(h)), n)))
                 ).scale(math.abs(normal.dot(light_direction)))
         )
     }
@@ -153,8 +190,6 @@ fn irradiance(scene Scene, ray Ray) Color {
     accum.add_in(
         scene.ambient_color.mult(kd)
     )
-
-
     return accum
 }
 
@@ -184,9 +219,40 @@ fn raytrace(scene Scene) Image {
 
     h := scene.camera.sensor.resolution.height
     w := scene.camera.sensor.resolution.width
-
-    for row in 0 .. h {
-        for col in 0 .. w {
+    sample_size := scene.camera.sensor.samples
+    
+    // if anti-aliasing is turned on do this
+    if sample_size > 1 {
+        for row in 0 .. h {
+            for col in 0 .. w {
+                mut color := Color{0, 0, 0}
+                for ii := 0; ii < sample_size; ii++ {
+                    for jj := 0; jj < sample_size; jj++ {
+                        u := (f64(col) + (f64(ii) + 0.5) / sample_size) / f64(w)
+                        v := (f64(row) + (f64(jj) + 0.5) / sample_size) / f64(h)
+                        q := scene.camera.frame.o.add(
+                    scene.camera.frame.x.scale((u - 0.5) * scene.camera.sensor.size.width)
+                    ).add(
+                        scene.camera.frame.y.scale(-(v - 0.5) * scene.camera.sensor.size.height)
+                    ).sub(
+                        scene.camera.frame.z.scale(scene.camera.sensor.distance)
+                    )
+                        ray := scene.camera.frame.o.ray_through(q)
+                        color = color.add(irradiance(scene, ray))
+                    }
+                }
+                
+                
+                // create a ray that passes from the focal point of the camera to the scene
+                
+                // then we determine what color to make that pixel with 'irradiance'
+                image.set_xy(col, row, color.scale(1.0 / f64(sample_size * sample_size)))
+            }
+        }
+        // if no anti-aliasing do this
+    } else {
+        for row in 0 .. h {
+            for col in 0 .. w {
             u := f64(col + 0.5) / f64(w) 
             v := f64(row + 0.5) / f64(h)
             q := scene.camera.frame.o.add(
@@ -200,6 +266,7 @@ fn raytrace(scene Scene) Image {
             ray := scene.camera.frame.o.ray_through(q)
             // then we determine what color to make that pixel with 'irradiance'
             image.set_xy(col, row, irradiance(scene, ray))
+            }
         }
     }
     return image
