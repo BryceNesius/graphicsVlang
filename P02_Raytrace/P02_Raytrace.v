@@ -28,6 +28,7 @@ type Shape        = gfx.Shape
 //       your code will render all the scenes!
 fn get_scene_filenames() []string {
     return [
+        /*
         'P02_00_sphere',
         'P02_01_sphere_ambient',
         'P02_02_sphere_room',
@@ -37,6 +38,9 @@ fn get_scene_filenames() []string {
         'P02_06_balls_on_plane',
         'P02_07_reflections',
         'P02_08_antialiased',
+        'P02_09_pointLights',
+        */
+        'P02_10_creativity_wow'
     ]
 }
 fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
@@ -46,6 +50,8 @@ fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
     }
 }
 fn intersect_ray_quad(surface Surface, ray Ray) Intersection {
+    ctr := surface.frame.o 
+    radius := surface.radius
     c := surface.frame.o
     e := ray.e
     d := ray.d 
@@ -55,6 +61,11 @@ fn intersect_ray_quad(surface Surface, ray Ray) Intersection {
         return gfx.no_intersection
     }
     p := ray.at(t)
+    distance := ctr.vector_to(p)
+    if math.abs(distance.x) > radius || math.abs(distance.y) > radius || math.abs(distance.z) > radius {
+        return gfx.no_intersection
+    }
+
     return Intersection{
         frame: gfx.frame_oz(p, n),
         surface: surface,
@@ -95,7 +106,7 @@ fn intersect_ray_sphere(surface Surface, ray Ray) Intersection {
 
     if t < ray.t_min {
         t = (-b + math.sqrt(d)) / 2.0
-    }
+    } 
     if t > ray.t_max || t < ray.t_min {
         return gfx.no_intersection
     }
@@ -166,14 +177,27 @@ fn irradiance(scene Scene, ray Ray) Color {
     kd := intersection.surface.material.kd
     ks := intersection.surface.material.ks
     n := intersection.surface.material.n
+    kr := intersection.surface.material.kr
+    v_direction := ray.d.negate()
+    r := v_direction.reflect(normal)
+    reflect_direction := intersection.frame.o.ray_along(r)
+
+    // Refraction terms
+    n1 := 1.0
+    n2 := 1.3
+    n_ratio := n1 / n2
+    c1 := normal.dot(v_direction)
+    c2 := math.sqrt((1- (n_ratio * n_ratio) * (1 - (c1*c1))))
+ 
+    t := (v_direction.as_vector().scale(n_ratio)) + normal.scale(((n_ratio*c1)-c2))
+
     // kd -> the amount of reflected light from the object based on the material
     // kl -> the color and intensity of the light source
     for light in scene.lights {
-        v_direction := ray.d.negate()
         light_response := light.kl.scale(1.0 / intersection.frame.o.distance_squared_to(light.frame.o))
         light_direction := intersection.frame.o.direction_to(light.frame.o)
         h := light_direction.as_vector().add(v_direction.as_vector()).direction()
-
+       
         shadow_ray := intersection.frame.o.ray_to(light.frame.o)
         if intersect_ray_scene(scene, shadow_ray).hit() {
             // in shadow
@@ -190,6 +214,12 @@ fn irradiance(scene Scene, ray Ray) Color {
     accum.add_in(
         scene.ambient_color.mult(kd)
     )
+    // reflection
+    if !kr.is_black() {
+        accum.add_in(
+            (irradiance(scene, reflect_direction).mult(kr)))
+    }
+        
     return accum
 }
 
@@ -220,7 +250,7 @@ fn raytrace(scene Scene) Image {
     h := scene.camera.sensor.resolution.height
     w := scene.camera.sensor.resolution.width
     sample_size := scene.camera.sensor.samples
-    
+
     // if anti-aliasing is turned on do this
     if sample_size > 1 {
         for row in 0 .. h {
