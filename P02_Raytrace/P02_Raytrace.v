@@ -28,19 +28,18 @@ type Shape        = gfx.Shape
 //       your code will render all the scenes!
 fn get_scene_filenames() []string {
     return [
-        /*
+    
         'P02_00_sphere',
         'P02_01_sphere_ambient',
         'P02_02_sphere_room',
         'P02_03_quad',
         'P02_04_quad_room',
-        'P02_05_ball_on_plane',
-        'P02_06_balls_on_plane',
-        'P02_07_reflections',
-        'P02_08_antialiased',
-        'P02_09_pointLights',
-        */
-        'P02_10_creativity_wow'
+        //'P02_05_ball_on_plane',
+        //'P02_06_balls_on_plane',
+        //'P02_07_reflections',
+        //'P02_08_antialiased',
+        'P02_11_refraction'
+        //'P02_10_creativity_wow'
     ]
 }
 fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
@@ -175,6 +174,7 @@ fn irradiance(scene Scene, ray Ray) Color {
     }
     normal := intersection.frame.z
     kd := intersection.surface.material.kd
+    kt := intersection.surface.material.kt
     ks := intersection.surface.material.ks
     n := intersection.surface.material.n
     kr := intersection.surface.material.kr
@@ -183,14 +183,12 @@ fn irradiance(scene Scene, ray Ray) Color {
     reflect_direction := intersection.frame.o.ray_along(r)
 
     // Refraction terms
-    n1 := 1.0
-    n2 := 1.3
+    n1 := intersection.surface.material.n1
+    n2 := intersection.surface.material.n2
     n_ratio := n1 / n2
     c1 := normal.dot(v_direction)
-    c2 := math.sqrt((1- (n_ratio * n_ratio) * (1 - (c1*c1))))
+    c2 := (1- (n_ratio * n_ratio) * (1 - (c1*c1)))
  
-    t := (v_direction.as_vector().scale(n_ratio)) + normal.scale(((n_ratio*c1)-c2))
-
     // kd -> the amount of reflected light from the object based on the material
     // kl -> the color and intensity of the light source
     for light in scene.lights {
@@ -219,6 +217,17 @@ fn irradiance(scene Scene, ray Ray) Color {
         accum.add_in(
             (irradiance(scene, reflect_direction).mult(kr)))
     }
+    // refraction
+    if !kt.is_black() {
+        if ((n_ratio*n_ratio) * (1 - (c1*c1))) <= 1 {
+            t := (v_direction.scale(n_ratio)) + normal.scale(((n_ratio*c1)-math.sqrt(c2)))
+            t_dir := intersection.frame.o.ray_along(t.direction())
+            accum.add_in(
+                (irradiance(scene, t_dir).mult(kt))
+            )
+        }
+    }   
+    
         
     return accum
 }
@@ -279,6 +288,7 @@ fn raytrace(scene Scene) Image {
                 image.set_xy(col, row, color.scale(1.0 / f64(sample_size * sample_size)))
             }
         }
+
         // if no anti-aliasing do this
     } else {
         for row in 0 .. h {

@@ -33,11 +33,17 @@ pub:
     samples    int          = 1
 }
 
+pub enum LightType {
+    point           // 0 
+    directional     // 1
+}
+
 pub struct Light {
 pub:
     kl     Color = white
     frame  Frame = Frame{ o: Point{ 0, 0, 5 } }
     lookat LookAt
+    lighttype LightType = LightType.directional
 }
 
 pub enum Shape {
@@ -58,7 +64,11 @@ pub:
     kd Color = white
     ks Color = black
     n  f64   = 10.0
+    n1 f64   = 1.0
+    n2 f64   = 1.0
     kr Color = black
+    kt Color = black
+    
 }
 
 
@@ -130,6 +140,7 @@ pub fn (light Light) update_from_load() Light {
     return Light{
         frame: frame,
         kl: light.kl,
+        lighttype: light.lighttype
     }
 }
 
