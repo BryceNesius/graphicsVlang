@@ -8,7 +8,7 @@ import math
 // ex: replacing `gfx.Scene` with just `Scene`
 
 type Point     = gfx.Point
-type Vector    = gfx.Vector
+type Vector    = gfx.Vector  
 type Direction = gfx.Direction
 type Normal    = gfx.Normal
 type Ray       = gfx.Ray
@@ -28,18 +28,19 @@ type Shape        = gfx.Shape
 //       your code will render all the scenes!
 fn get_scene_filenames() []string {
     return [
-    
+    /*
         'P02_00_sphere',
         'P02_01_sphere_ambient',
         'P02_02_sphere_room',
         'P02_03_quad',
         'P02_04_quad_room',
-        //'P02_05_ball_on_plane',
-        //'P02_06_balls_on_plane',
-        //'P02_07_reflections',
-        //'P02_08_antialiased',
+        'P02_05_ball_on_plane',
+        'P02_06_balls_on_plane',
+        'P02_07_reflections',
+        'P02_08_antialiased',
+        'P02_10_creativity_wow',
+        */
         'P02_11_refraction'
-        //'P02_10_creativity_wow'
     ]
 }
 fn intersect_ray_surface(surface Surface, ray Ray) Intersection {
@@ -219,7 +220,9 @@ fn irradiance(scene Scene, ray Ray) Color {
     }
     // refraction
     if !kt.is_black() {
+        println("First")
         if ((n_ratio*n_ratio) * (1 - (c1*c1))) <= 1 {
+            println("second")
             t := (v_direction.scale(n_ratio)) + normal.scale(((n_ratio*c1)-math.sqrt(c2)))
             t_dir := intersection.frame.o.ray_along(t.direction())
             accum.add_in(

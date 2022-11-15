@@ -358,19 +358,20 @@ Creative Artifact - (P02_10_creativity_wow.json)
 For this part I found it interesting to try and make a planetary scene in space with only sphere, lights and quads. The "black hole" in the center 
 is using refraction, but it turned out black, so still some values in the scene to tweak, but I liked the idea of creating a scene where the black 
 hole is sucking up all of the planets around it. It was super interesting to play with scene values and actually see how changing certain values
-changed the rendering of the scene. It helped to understand what was doing what in each function.
+changed the rendering of the scene. It helped to understand what was doing what in each function. I initially was going
+to make a transparent glass ball in the center and a bunch circling it so you could see the warped 'planets behind it'.
+However my refraction turned out to be doing the opposite and it looked sort of like a black hole since it was 
+looking flat instead of like the other plants. So I ended up trying to make a black hole sucking in other planets via
+playing with each of the values passed in through the scene. The background is one giant sphere (planet) and the bottom plane 
+looks like mist sort of with planets rising out of it. I ended up noticing a side-effect that was almost a big pac-man 
+smiley face. I wanted to paint a face on one of the planets and make a smiley face using the shadows of other planets. I played
+with it for awhile, even putting a black plane in for a mouth, but I couldn't get it quite right, so pictured is 
+my final result...for now. 
 
 
 
-Procedural
+Overall function flow for P02_Raytrace
 --------------------------------------------------------------
-
-At vero eos et accusamus et iusto odio dignissimos ducimus qui
-blanditiis praesentium voluptatum deleniti atque corrupti quos dolores
-et quas molestias excepturi sint occaecati cupiditate non provident,
-similique sunt in culpa qui officia deserunt mollitia animi, id est
-laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita
-distinctio. 
 
 ***************************************************************************************************************************************
 *                                                            
@@ -385,50 +386,22 @@ distinctio.
 *                           
 ***************************************************************************************************************************************
 
-Nam libero tempore, cum `soluta` nobis est eligendi optio
-cumque nihil impedit quo minus id quod maxime placeat facere possimus,
-omnis voluptas assumenda est, omnis dolor repellendus. Temporibus
-autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe
-eveniet ut et voluptates repudiandae sint et molestiae non
-recusandae. 
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-a long preformatted code block a long preformatted code block a long preformatted code block a long preformatted code block a long preformatted code block
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+What I learned...
+===========================================
+This project was quite eye opening to the amount of work and computation that goes into the everyday things I 
+use. I learned how computers view raytracing and how it is used to calculate intersections and then compute what
+color any given point should be. I'm extremely excited to check out some more advanced algorithms and compare 
+the difference in quality and runtime relative to how 'real' things look. I learned how intertwined so many things 
+were and how to troubleshoot problems where I had no idea what to do or where to begin. I think that hearing how 
+my Professor troubleshoots and what questions he asks definitely helped me understand how to tackle those problems
+that make you feel lost. 
 
 
-Modules
-==============================================================
-
-Nam libero tempore, cum soluta nobis est eligendi optio
-cumque nihil impedit quo minus id quod maxime placeat facere possimus,
-omnis voluptas assumenda est, omnis dolor repellendus.
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ rust
-fn main() {
-    let x = 5u32;
-
-    let y = {
-        let x_squared = x * x;
-        let x_cube = x_squared * x;
-
-        // This expression will be assigned to `y`
-        x_cube + x_squared + x
-    };
-
-    let z = {
-        // The semicolon suppresses this expression and `()` is assigned to `z`
-        2 * x;
-    };
-
-    println!("x is {:?}", x);
-    println!("y is {:?}", y);
-    println!("z is {:?}", z);
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+Bugs
+===========================================
+Currently, refraction gets stuck in a loop sometimes and uses up the stack space. I think I know the cause of this,
+I just didn't have time to troubleshoot it fully. My irradiance function I believe is getting stuck recursively 
+and needs to have one more condition to keep it from breaking.
 <!--
 ![`a long code caption a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg)
 ![`a long code caption a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg) ![`a long code caption`](robot.jpg)
@@ -437,7 +410,7 @@ fn main() {
 See Also
 ==============================================================
 
-[Link to nowhere](nowhere).
+[Link to nowhere](https://github.com/BryceNesius/graphicsVlang).
 
 
  
